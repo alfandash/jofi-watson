@@ -1,7 +1,8 @@
 var ConversationV1 = require('watson-developer-cloud/conversation/v1');
 var redis = require('redis')
 const firebase = require('firebase')
-
+const axios = require('axios')
+var fastXmlParser = require('fast-xml-parser');
 
 // Redis function
 var client = redis.createClient()
@@ -83,7 +84,7 @@ var sendResponse = (message, req, res, dbFirebase) => {
       dbFirebase.push({...setMessage, message: response.output})
 
       if(response.output.action.type = "get_job") {
-        getJobFromAPI(response.output.action, function (listJob) {          
+        getJobList(response.output.action, function (listJob) {          
           console.log(listJob)
 
           // save context to redis
@@ -103,6 +104,7 @@ var sendResponse = (message, req, res, dbFirebase) => {
           dbFirebase.push({...setMessage, message: {
             text: ['Kamu bisa cari kerja lagi atau mengakhir dialog ini']
           }})
+          console.log(responseWithListJob)
           res.send(responseWithListJob)
         })
       }
@@ -120,15 +122,32 @@ var sendResponse = (message, req, res, dbFirebase) => {
   }
 }
 
-var getJobFromAPI = (action, cb) => {
 
-  var sepecification = {
+
+
+var getJobList = (action, cb) => {
+
+  var specification = {
     location: action.location || '',
     expert: action.expert || '',
     list: "pekerjaan di " + action
   }
 
-  return cb(sepecification)
+  if(specification.location !== null) {
+    const locationUrl = `https://stackoverflow.com/jobs/feed?l=${specification.location}%2c+Indonesia&d=20&u=Km`
+    axios.get(locationUrl)
+    .then(result => {
+      var jsonString = fastXmlParser.parse(result.data);
+      cb(jsonString.rss.channel.item)
+    })
+    .catch(err => {
+      console.log(err)
+    })
+  }
+
+  
+  const expertUrl = `https://stackoverflow.com/jobs/feed?q=${specification.expert}&l=indonesia&d=20&u=Km`
+
 }
 
 
