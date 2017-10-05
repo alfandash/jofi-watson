@@ -32,7 +32,7 @@ exports.question = (req, res) => {
   console.log(req.body)
   var contextRedis = {}
   var message = {
-    input: { text: req.body.message },
+    input: { text: req.body.message.trim() },
   }
   var dbFirebase = Firebase.ref('jofi/' + req.params.id)
 
@@ -73,20 +73,45 @@ var sendResponse = (message, req, res, dbFirebase) => {
   conversation.message(message, processResponse);
 
   function processResponse(err, response) {
+
+    console.log(response)
     if (err) {
       console.error(err); // something went wrong
       return;
     }
 
     if (response.output.action != null) {
-
       // send response to user 
       dbFirebase.push({...setMessage, message: response.output})
 
+      // if(response.output.action.type = "clear_history") {
+      //   dbFirebase.set({...setMessage, message: response.output })
+      //   dbFirebase.push({...setMessage, message: {
+      //     text: 'Sudah bersih juragan'
+      //   }})
+
+      //   res.send({
+      //     ...setMessage, message: {
+      //       text: 'Sudah bersih juragan'
+      //     }
+      //   })
+      // }
+
       if(response.output.action.type = "get_job") {
         getJobList(response.output.action, function (listJob) {          
-          console.log(listJob)
+          if(!listJob) {
+            let responseWithListJob = {
+              ...response.output,
+              text: ['Duh maaf jofi tidak bisa menemukan pekerjaan yang kamu maksud']
+            }
 
+            // send response from watson to firebase
+            setMessage.message = responseWithListJob
+            dbFirebase.push(setMessage)
+            res.send(setMessage)
+          }
+
+          console.log(listJob)
           // save context to redis
           setContext(req.params.id, { ...response.context })
           
@@ -101,10 +126,25 @@ var sendResponse = (message, req, res, dbFirebase) => {
           setMessage.message = responseWithListJob
           dbFirebase.push(setMessage)
 
+          // send lowongan 
+
+          for(i=0; i<5; i++) {
+             dbFirebase.push({
+              ...setMessage, message: {
+                text: [`nama lowongan: ${listJob[i].title}`]
+              }
+            })
+            dbFirebase.push({
+              ...setMessage, message: {
+                text: [`Apply disini: ${listJob[i].link}`]
+              }
+            })
+          }
+          
           dbFirebase.push({...setMessage, message: {
-            text: ['Kamu bisa cari kerja lagi atau mengakhir dialog ini']
+            text: ['Kamu bisa cari kerja lagi dengan menyebutkan kerjaan yang kamu inginkan, atau menyudahi ini saja T.T']
           }})
-          console.log(responseWithListJob)
+          // console.log(responseWithListJob)
           res.send(responseWithListJob)
         })
       }
@@ -127,15 +167,38 @@ var sendResponse = (message, req, res, dbFirebase) => {
 
 var getJobList = (action, cb) => {
 
+  console.log(action)
   var specification = {
     location: action.location || '',
     expert: action.expert || '',
     list: "pekerjaan di " + action
   }
 
-  if(specification.location !== null) {
-    const locationUrl = `https://stackoverflow.com/jobs/feed?l=${specification.location}%2c+Indonesia&d=20&u=Km`
+  // console.log(specification)
+  if (specification.location !== '' && specification.expert !== '' ) {
+    const url = `https://stackoverflow.com/jobs/feed?q=${encodeURI(specification.expert)}&l=${encodeURI(specification.location)}&d=20&u=Km`
+    axios.get(url)
+    .then(result => {
+      var jsonString = fastXmlParser.parse(result.data);
+      cb(jsonString.rss.channel.item)
+    })
+    .catch(err => {
+      console.log(err)
+    })
+  } else if(specification.location !== '') {
+    const locationUrl = `https://stackoverflow.com/jobs/feed?l=${encodeURI(specification.location)}%2c+Indonesia&d=20&u=Km`
     axios.get(locationUrl)
+    .then(result => {
+      var jsonString = fastXmlParser.parse(result.data);
+      cb(jsonString.rss.channel.item)
+    })
+    .catch(err => {
+      console.log(err)
+    })
+  } else if(specification.expert !== '') {
+    console.log('masuk sini')
+    const url = `https://stackoverflow.com/jobs/feed?q=${encodeURI(specification.expert)}&l=indonesia&d=20&u=Km`
+    axios.get(url)
     .then(result => {
       var jsonString = fastXmlParser.parse(result.data);
       cb(jsonString.rss.channel.item)
