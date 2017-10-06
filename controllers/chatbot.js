@@ -84,20 +84,12 @@ var sendResponse = (message, req, res, dbFirebase) => {
       // send response to user 
       dbFirebase.push({...setMessage, message: response.output})
 
-      // if(response.output.action.type = "clear_history") {
-      //   dbFirebase.set({...setMessage, message: response.output })
-      //   dbFirebase.push({...setMessage, message: {
-      //     text: 'Sudah bersih juragan'
-      //   }})
+      if (response.output.action.type === "clear_history") {
+        dbFirebase.set({})
+        dbFirebase.push({ ...setMessage, message: response.output })
 
-      //   res.send({
-      //     ...setMessage, message: {
-      //       text: 'Sudah bersih juragan'
-      //     }
-      //   })
-      // }
-
-      if(response.output.action.type = "get_job") {
+        res.send({ ...setMessage, message: response.output })
+      } else if(response.output.action.type === "get_job") {
         getJobList(response.output.action, function (listJob) {          
           if(!listJob) {
             let responseWithListJob = {
