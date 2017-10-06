@@ -4,7 +4,10 @@ const firebase = require('firebase')
 const axios = require('axios')
 var fastXmlParser = require('fast-xml-parser');
 
+// include helpers
 var getJobList = require('../helper/getJob')
+var sendEmail = require('../helper/sendEmail')
+var checkEmail = require('../helper/checkEmail')
 
 // Redis function
 var client = redis.createClient()
@@ -12,7 +15,7 @@ const setContext = (id, obj) => {
   client.set(id, JSON.stringify(obj), 'EX', 60)
 }
 const setLogSearchJob = (id, jobList) => {
-  client.set(`${id}logSearchJob`, JSON.stringify(jobList), 'EX', 120)
+  client.set(`${id}logSearchJob`, JSON.stringify(jobList))
 }
 
 // Firabase configuration
@@ -93,7 +96,57 @@ var sendResponse = (message, req, res, dbFirebase) => {
       // send response to user 
       dbFirebase.push({...setMessage, message: response.output})
 
-      if (response.output.action.type === "find_history") {
+      if (response.output.action.type === "send_email") {
+        // save context to redis
+        setContext(req.params.id, { ...response.context })
+
+        //check email before sent email
+        if (checkEmail(response.input.text)) {
+          client.get(`${req.params.id}logSearchJob`, function (err, replay) {
+            if (replay) {
+              sendEmail(response.input.text, JSON.parse(replay), function (status) {
+                console.log(status)
+                var responseMessage = {
+                  ...response.output,
+                  text: [`Hasil pencarian lowongan sudah Jofi kirim ke email ${response.input.text}`]
+                }
+
+                // send response from watson to firebase
+                setMessage.message = responseMessage
+                dbFirebase.push(setMessage)
+
+                // send response to client
+                res.send(setMessage)
+              })
+            } else {
+              var responseRejection = {
+                ...response.output,
+                text: [`Sepertinya kamu belum pernah mencari pekerjaan, coba cari dulu pekerjaan yah`]
+              }
+
+              // send response from watson to firebase
+              setMessage.message = responseRejection
+              dbFirebase.push(setMessage)
+
+              // send response to client
+              res.send(setMessage)
+            }
+          })
+        } else {
+          var responseRejection = {
+            ...response.output,
+            text: [`Email yang kamu masukkan tidak sesuai nih ulangi dari awal yah`]
+          }
+
+          // send response from watson to firebase
+          setMessage.message = responseRejection
+          dbFirebase.push(setMessage)
+
+          // send response to client
+          res.send(setMessage)
+        }
+
+      } else if (response.output.action.type === "find_history") {
          client.get(`${req.params.id}logSearchJob`, function (err, replay) {
 
            // save context to redis
@@ -110,6 +163,11 @@ var sendResponse = (message, req, res, dbFirebase) => {
             // send response from watson to firebase
             setMessage.message = responseWithHistoryJob
             dbFirebase.push(setMessage)
+            // sendEmail('cumiasem91@gmail.com', JSON.parse(replay), function(response) {
+
+            //   console.log(response)
+
+            // })
 
 
             var listJob = JSON.parse(replay)
