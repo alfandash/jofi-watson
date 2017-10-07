@@ -21,6 +21,7 @@ var getJobList = (action, cb) => {
         console.log(err)
       })
   } else if (specification.location !== '') {
+    // console.log('lokasi nih bra',specification.location)
     const locationUrl = `https://stackoverflow.com/jobs/feed?l=${encodeURI(specification.location)}%2c+Indonesia&d=20&u=Km`
     axios.get(locationUrl)
       .then(result => {
@@ -31,7 +32,6 @@ var getJobList = (action, cb) => {
         console.log(err)
       })
   } else if (specification.expert !== '') {
-    console.log('masuk sini')
     const url = `https://stackoverflow.com/jobs/feed?q=${encodeURI(specification.expert)}&l=indonesia&d=20&u=Km`
     axios.get(url)
       .then(result => {

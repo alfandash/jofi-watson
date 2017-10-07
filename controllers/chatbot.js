@@ -14,8 +14,13 @@ var client = redis.createClient()
 const setContext = (id, obj) => {
   client.set(id, JSON.stringify(obj), 'EX', 60)
 }
+
 const setLogSearchJob = (id, jobList) => {
   client.set(`${id}logSearchJob`, JSON.stringify(jobList))
+}
+
+const setLogJobChoosen = (id, job) => {
+  client.set(`${id}logJobChoosen`, JSON.stringify(job))
 }
 
 // Firabase configuration
@@ -40,8 +45,7 @@ exports.question = (req, res) => {
   console.log(req.body)
   var contextRedis = {}
   var message = {
-    input: { text: req.body.message.trim() },
-    name: 'alfan'
+    input: { text: req.body.message.trim() }
   }
   var dbFirebase = Firebase.ref('jofi/' + req.params.id)
 
@@ -61,7 +65,10 @@ exports.question = (req, res) => {
     }
     if (replay) {
       contextRedis = JSON.parse(replay)
-      message = {...message, context: contextRedis}
+      message = {...message, context: {
+        ...contextRedis, 
+        job: req.body.choosenJob || ''
+      }}
       sendResponse(message, req, res, dbFirebase)
     } else {
 
@@ -82,11 +89,14 @@ var sendResponse = (message, req, res, dbFirebase) => {
     date: `${new Date()}`
   }
 
+  // set job choosen if any
+  console.log('message di console log',message)
+
   conversation.message(message, processResponse);
 
   function processResponse(err, response) {
 
-    console.log('----response',response)
+    console.log('----response', req.params.id, response.output)
     if (err) {
       console.error(err); // something went wrong
       return;
@@ -96,7 +106,69 @@ var sendResponse = (message, req, res, dbFirebase) => {
       // send response to user 
       dbFirebase.push({...setMessage, message: response.output})
 
-      if (response.output.action.type === "send_email") {
+      if (response.output.action.type === "send_choosen_job_email") {
+
+        // save context to redis
+        setContext(req.params.id, { ...response.context })
+
+        //check email before sent email
+        if (checkEmail(response.input.text)) {
+          client.get(`${req.params.id}logJobChoosen`, function (err, replay) {
+            if (replay) {
+              sendEmail(response.input.text, [JSON.parse(replay)], function (status) {
+                console.log(status)
+                var responseMessage = {
+                  ...response.output,
+                  text: [`Lowongan yang kamu pilih Jofi kirim ke email ${response.input.text}`]
+                }
+
+                // send response from watson to firebase
+                setMessage.message = responseMessage
+                dbFirebase.push(setMessage)
+
+                // send response to client
+                res.send(setMessage)
+              })
+            } else {
+              var responseRejection = {
+                ...response.output,
+                text: [`Sepertinya kamu belum memilih lowongan yah`]
+              }
+
+              // send response from watson to firebase
+              setMessage.message = responseRejection
+              dbFirebase.push(setMessage)
+
+              // send response to client
+              res.send(setMessage)
+            }
+          })
+        } else {
+          var responseRejection = {
+            ...response.output,
+            text: [`Email yang kamu masukkan tidak sesuai nih ulangi dari awal yah`]
+          }
+
+          // send response from watson to firebase
+          setMessage.message = responseRejection
+          dbFirebase.push(setMessage)
+
+          // send response to client
+          res.send(setMessage)
+        }
+        
+
+      } else if (response.output.action.type === "save_choosen_job") {
+        // save context to redis
+        setContext(req.params.id, { ...response.context })
+
+        //save job choose to redis
+        setLogJobChoosen(req.params.id, response.output.action.job)
+
+        // send response to client
+        res.send({...setMessage, message: response.output })
+
+      } else if (response.output.action.type === "send_email") {
         // save context to redis
         setContext(req.params.id, { ...response.context })
 
@@ -163,27 +235,21 @@ var sendResponse = (message, req, res, dbFirebase) => {
             // send response from watson to firebase
             setMessage.message = responseWithHistoryJob
             dbFirebase.push(setMessage)
-            // sendEmail('cumiasem91@gmail.com', JSON.parse(replay), function(response) {
-
-            //   console.log(response)
-
-            // })
-
 
             var listJob = JSON.parse(replay)
             // send history to firebase
-            for (i = 0; i < 5; i++) {
-              dbFirebase.push({
-                ...setMessage, message: {
-                  text: [`nama lowongan: ${listJob[i].title}`]
-                }
-              })
-              dbFirebase.push({
-                ...setMessage, message: {
-                  text: [`Apply disini: ${listJob[i].link}`]
-                }
-              })
-            }
+            // for (i = 0; i < 5; i++) {
+            //   dbFirebase.push({
+            //     ...setMessage, message: {
+            //       text: [`nama lowongan: ${listJob[i].title}`]
+            //     }
+            //   })
+            //   dbFirebase.push({
+            //     ...setMessage, message: {
+            //       text: [`Apply disini: ${listJob[i].link}`]
+            //     }
+            //   })
+            // }
 
             // send response to client
             res.send(setMessage)
@@ -201,19 +267,18 @@ var sendResponse = (message, req, res, dbFirebase) => {
               // send response to client
               res.send(setMessage)
            }
-          // console.log('dapat dari redis', JSON.parse(replay))
         })
       } else if (response.output.action.type === "clear_history") {
+
+        console.log('clear history')
         dbFirebase.set({})
-        dbFirebase.push({ ...setMessage, message: response.output })
+        dbFirebase.push({ ...setMessage, message: {...response.output, text: ['Sudah jofi bersihkan komandan']} })
 
         res.send({ ...setMessage, message: response.output })
       } else if(response.output.action.type === "get_job") {
-        getJobList(response.output.action, function (listJob) {          
+        getJobList(response.output.action, function (listJob) {   
+          console.log(listJob)       
           if(!listJob) {
-
-            // console.log(`output`,response.output.location)
-
             if (response.output.action.expert && response.output.action.location ) {
               var responseWithListJob = {
                 ...response.output,
@@ -241,15 +306,9 @@ var sendResponse = (message, req, res, dbFirebase) => {
             // send response to client
             res.send(setMessage)
           } else {
-            // console.log(listJob)
             // save context to redis
             setContext(req.params.id, { ...response.context })
             setLogSearchJob(req.params.id, listJob)
-
-            // client.get(`${req.params.id}logSearchJob`, function (err, replay) {
-            //   console.log('dapat dari redis', JSON.parse(replay))
-            // })
-
 
             // setup new response 
             let responseWithListJob = {
@@ -264,22 +323,22 @@ var sendResponse = (message, req, res, dbFirebase) => {
 
             // send lowongan 
 
-            for (i = 0; i < 5; i++) {
-              dbFirebase.push({
-                ...setMessage, message: {
-                  text: [`nama lowongan: ${listJob[i].title}`]
-                }
-              })
-              dbFirebase.push({
-                ...setMessage, message: {
-                  text: [`Apply disini: ${listJob[i].link}`]
-                }
-              })
-            }
+            // for (i = 0; i < 5; i++) {
+            //   dbFirebase.push({
+            //     ...setMessage, message: {
+            //       text: [`nama lowongan: ${listJob[i].title}`]
+            //     }
+            //   })
+            //   dbFirebase.push({
+            //     ...setMessage, message: {
+            //       text: [`Apply disini: ${listJob[i].link}`]
+            //     }
+            //   })
+            // }
 
             dbFirebase.push({
               ...setMessage, message: {
-                text: ['Kamu bisa cari kerja lagi dengan menyebutkan kerjaan yang kamu inginkan, atau menyudahi ini saja']
+                text: ['Kamu bisa cari kerja lagi dengan menyebutkan bidang dan lokasi yang kamu inginkan, atau menyudahi ini saja T.T']
               }
             })
 
@@ -301,56 +360,5 @@ var sendResponse = (message, req, res, dbFirebase) => {
     }
   }
 }
-
-
-
-
-// var getJobList = (action, cb) => {
-
-//   console.log(action)
-//   var specification = {
-//     location: action.location || '',
-//     expert: action.expert || '',
-//     list: "pekerjaan di " + action
-//   }
-
-//   // console.log(specification)
-//   if (specification.location !== '' && specification.expert !== '' ) {
-//     const url = `https://stackoverflow.com/jobs/feed?q=${encodeURI(specification.expert)}&l=${encodeURI(specification.location)}&d=20&u=Km`
-//     axios.get(url)
-//     .then(result => {
-//       var jsonString = fastXmlParser.parse(result.data);
-//       cb(jsonString.rss.channel.item)
-//     })
-//     .catch(err => {
-//       console.log(err)
-//     })
-//   } else if(specification.location !== '') {
-//     const locationUrl = `https://stackoverflow.com/jobs/feed?l=${encodeURI(specification.location)}%2c+Indonesia&d=20&u=Km`
-//     axios.get(locationUrl)
-//     .then(result => {
-//       var jsonString = fastXmlParser.parse(result.data);
-//       cb(jsonString.rss.channel.item)
-//     })
-//     .catch(err => {
-//       console.log(err)
-//     })
-//   } else if(specification.expert !== '') {
-//     console.log('masuk sini')
-//     const url = `https://stackoverflow.com/jobs/feed?q=${encodeURI(specification.expert)}&l=indonesia&d=20&u=Km`
-//     axios.get(url)
-//     .then(result => {
-//       var jsonString = fastXmlParser.parse(result.data);
-//       cb(jsonString.rss.channel.item)
-//     })
-//     .catch(err => {
-//       console.log(err)
-//     })
-//   }
-
-  
-//   const expertUrl = `https://stackoverflow.com/jobs/feed?q=${specification.expert}&l=indonesia&d=20&u=Km`
-
-// }
 
 
