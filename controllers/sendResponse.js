@@ -188,21 +188,6 @@ var sendResponse = (message, req, res, dbFirebase) => {
             setMessage.message = responseWithHistoryJob
             dbFirebase.push(setMessage)
 
-            var listJob = JSON.parse(replay)
-            // send history to firebase
-            // for (i = 0; i < 5; i++) {
-            //   dbFirebase.push({
-            //     ...setMessage, message: {
-            //       text: [`nama lowongan: ${listJob[i].title}`]
-            //     }
-            //   })
-            //   dbFirebase.push({
-            //     ...setMessage, message: {
-            //       text: [`Apply disini: ${listJob[i].link}`]
-            //     }
-            //   })
-            // }
-
             // send response to client
             res.send(setMessage)
           } else {
@@ -272,21 +257,6 @@ var sendResponse = (message, req, res, dbFirebase) => {
             // send response from watson to firebase
             setMessage.message = responseWithListJob
             dbFirebase.push(setMessage)
-
-            // send lowongan 
-
-            // for (i = 0; i < 5; i++) {
-            //   dbFirebase.push({
-            //     ...setMessage, message: {
-            //       text: [`nama lowongan: ${listJob[i].title}`]
-            //     }
-            //   })
-            //   dbFirebase.push({
-            //     ...setMessage, message: {
-            //       text: [`Apply disini: ${listJob[i].link}`]
-            //     }
-            //   })
-            // }
 
             dbFirebase.push({
               ...setMessage, message: {
