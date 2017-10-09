@@ -32,6 +32,11 @@ function processResponse(err, response) {
     console.log('Detected intent: #' + response.intents[0].intent);
   }
 
+
+
+
+
+
   // Display the output from dialog, if any.
   if (response.output.text.length != 0) {
     console.log(response.output.text[0]);
