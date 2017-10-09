@@ -37,6 +37,12 @@ function processResponse(err, response) {
     console.log(response.output.text[0]);
   }
 
+
+
+
+
+
+
   // Prompt for the next round of input.
   var newMessageFromUser = prompt('>> ');
   conversation.message({
