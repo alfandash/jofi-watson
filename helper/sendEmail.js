@@ -177,7 +177,7 @@ var sendEmail = (email, listJob, cb) => {
                 <tr>
                 <td style="padding: 40px; font-family: sans-serif; font-size: 15px; line-height: 20px; color: #555555;">
                   <p style="margin: 0;">${job.title}</p>
-                  <p style="margin: 0;">location: ${job.location}</p>
+                  <p style="margin: 0;">Lokasi: ${job.location}</p>
                 </td>
               </tr>
               <tr>
@@ -213,7 +213,7 @@ var sendEmail = (email, listJob, cb) => {
         <tr>
           <td style="padding: 40px 10px;width: 100%;font-size: 12px; font-family: sans-serif; line-height:18px; text-align: center; color: #888888;"
             class="x-gmail-data-detectors">
-            <br><br> Company Name<br>123 Fake Street, SpringField, OR, 97477 US<br>(123) 456-7890
+            <br><br> JoFi: Si Job Finder <br> <br>Hacktiv8 Jakarta
             <br><br>
           </td>
         </tr>
