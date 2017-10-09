@@ -37,6 +37,7 @@ exports.question = (req, res) => {
 
   var contextRedis = {}
 
+  // push message from user to firebase
   dbFirebase.push(setMessage)
 
   client.get(req.params.id, function(err, replay) {
@@ -57,7 +58,7 @@ exports.question = (req, res) => {
         case "get_job_by_location": {
           getCityName(req.body.location.latitude, req.body.location.longitude, function(city) {
             message = {...message, input: { text: `${city}`}} 
-            sendResponse(message, req, res, dbFirebase)
+            // sendResponse(message, req, res, dbFirebase)
           })
         }
         break;
@@ -72,6 +73,7 @@ exports.question = (req, res) => {
        ...req.body
       }}
 
+      console.log(`masuk sini`,req.body.action)
       switch (req.body.action) {
         case "get_job_by_location": {
           getCityName(req.body.location.latitude, req.body.location.longitude, function(city) {

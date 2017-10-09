@@ -3,7 +3,7 @@ var url = 'http://maps.googleapis.com/maps/api/geocode/json?latlng=-6.260898,106
 
 
 function getCityName (latitude, longitude, cb) {
-  var googleMapApi = `http://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&sensor=true`
+  var googleMapApi = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&sensor=true&key=AIzaSyCsPckOoh98M3FLpimxQn5Hx4a_qB12uQs`
   
   var city = axios.get(googleMapApi)
   .then(({ data }) => {
@@ -16,5 +16,3 @@ function getCityName (latitude, longitude, cb) {
 }
 
 module.exports = getCityName
-
-// getCityName(`-6.260898`, `106.7814405`, function(data) {console.log(data)})

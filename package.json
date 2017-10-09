@@ -10,6 +10,8 @@
     "axios": "^0.16.2",
     "body-parser": "~1.17.1",
     "botbuilder": "^3.10.2",
+    "chai": "^4.1.2",
+    "chai-http": "^3.0.0",
     "cookie-parser": "~1.4.3",
     "cors": "^2.8.4",
     "debug": "~2.6.3",
