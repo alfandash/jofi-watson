@@ -58,7 +58,7 @@ exports.question = (req, res) => {
         case "get_job_by_location": {
           getCityName(req.body.location.latitude, req.body.location.longitude, function(city) {
             message = {...message, input: { text: `${city}`}} 
-            // sendResponse(message, req, res, dbFirebase)
+            sendResponse(message, req, res, dbFirebase)
           })
         }
         break;

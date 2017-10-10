@@ -13,7 +13,7 @@ var checkEmail = require('../helper/checkEmail')
 // Redis function
 var client = redis.createClient()
 const setContext = (id, obj) => {
-  client.set(id, JSON.stringify(obj), 'EX', 60)
+  client.set(id, JSON.stringify(obj), 'EX', 120)
 }
 
 const setLogSearchJob = (id, jobList) => {
@@ -40,6 +40,8 @@ var sendResponse = (message, req, res, dbFirebase) => {
     },
     date: `${new Date()}`
   }
+
+  let check = true
 
   // set job choosen if any
   console.log('message di console log', message)
@@ -71,7 +73,7 @@ var sendResponse = (message, req, res, dbFirebase) => {
                 console.log(status)
                 var responseMessage = {
                   ...response.output,
-                  text: [`Lowongan yang kamu pilih Jofi kirim ke email ${response.input.text}`]
+                  text: [`Lowongan yang kamu pilih Jofi kirim ke email ${response.input.text} harap tunggu 1-2 menit yah`]
                 }
 
                 // send response from watson to firebase
@@ -98,15 +100,27 @@ var sendResponse = (message, req, res, dbFirebase) => {
         } else {
           var responseRejection = {
             ...response.output,
-            text: [`Email yang kamu masukkan tidak sesuai nih ulangi dari awal yah`]
+            text: [`Email yang kamu masukkan tidak sesuai dengan format email`]
           }
 
           // send response from watson to firebase
           setMessage.message = responseRejection
           dbFirebase.push(setMessage)
 
+          client.get(`${req.params.id}logJobChoosen`, function (err, replay) {
+            message = { input: { text: 'job_choose' },
+              context: {
+                job: JSON.parse(replay),
+                type: "save_choosen_job",
+                repeat: 'repeat'
+              }
+            }
+          
+            sendResponse(message, req, res, dbFirebase)
+          })
+
           // send response to client
-          res.send(setMessage)
+          // res.send(setMessage)
         }
 
 
@@ -114,8 +128,10 @@ var sendResponse = (message, req, res, dbFirebase) => {
         // save context to redis
         setContext(req.params.id, { ...response.context })
 
-        //save job choose to redis
-        setLogJobChoosen(req.params.id, response.output.action.job)
+        if (response.output.action.job) {
+          //save job choose to redis
+          setLogJobChoosen(req.params.id, response.output.action.job)
+        }
 
         // send response to client
         res.send({ ...setMessage, message: response.output })
@@ -159,15 +175,20 @@ var sendResponse = (message, req, res, dbFirebase) => {
         } else {
           var responseRejection = {
             ...response.output,
-            text: [`Email yang kamu masukkan tidak sesuai nih ulangi dari awal yah`]
+            text: [`Email yang kamu masukkan tidak sesuai dengan format email`]
           }
+
+          // sent again to watson
+          message = {input: { text: 'kirim histoy'}, context: { repeat: 'repeat'}}
+
+          sendResponse(message, req, res, dbFirebase)
 
           // send response from watson to firebase
           setMessage.message = responseRejection
           dbFirebase.push(setMessage)
 
           // send response to client
-          res.send(setMessage)
+          // res.send(setMessage)
         }
 
       } else if (response.output.action.type === "find_history") {
