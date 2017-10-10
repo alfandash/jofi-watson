@@ -255,6 +255,7 @@ var sendResponse = (message, req, res, dbFirebase) => {
               }
             }
 
+            
             // save context to redis
             setContext(req.params.id, { ...response.context })
 
