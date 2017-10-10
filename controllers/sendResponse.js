@@ -52,7 +52,8 @@ var sendResponse = (message, req, res, dbFirebase) => {
 
     console.log('----response', req.params.id, response.output)
     if (err) {
-      console.error(err); // something went wrong
+      // something went wrong
+      console.error(err); 
       return;
     }
 
