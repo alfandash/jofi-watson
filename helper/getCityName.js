@@ -10,7 +10,8 @@ function getCityName (latitude, longitude, cb) {
     cb(data.results[0].address_components[7].short_name)
   })
   .catch(error => {
-    cb(error)
+    // error 
+    cb(error.response)
   })
   return {}
 }

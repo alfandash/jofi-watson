@@ -6,21 +6,9 @@ var papuas = require('../models/papua')
 var babels = require('../models/babel')
 var kepris = require('../models/kepri')
 
-
-function findAllPapua() {
-  papuas.find({}, function (err, result) {
-    if (err) {
-      res.status(500).send(err)
-    } else {
-      console.log(result)
-    }
-  })
-}
-
-
 var getJobList = (action, cb) => {
 
-  console.log(action)
+  // console.log(action)
   var specification = {
     location: action.location || '',
     expert: action.expert || ''
@@ -37,6 +25,7 @@ var getJobList = (action, cb) => {
       })
       .catch(err => {
         console.log(err)
+        cb(err)
       })
   } else if (specification.location !== '') {
     // console.log('lokasi nih bra',specification.location)
@@ -104,13 +93,11 @@ var getJobList = (action, cb) => {
         cb(jsonString.rss.channel.item)
       })
       .catch(err => {
-        console.log(err)
+        // console.log(err)
       })
+  } else {
+    return cb({})
   }
-
-
-  const expertUrl = `https://stackoverflow.com/jobs/feed?q=${specification.expert}&l=indonesia&d=20&u=Km`
-
 }
 
 module.exports = getJobList

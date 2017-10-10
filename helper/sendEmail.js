@@ -5,26 +5,29 @@ const nodemailer = require('nodemailer');
 var sendEmail = (email, listJob, cb) => {
   // Generate test SMTP service account from ethereal.email
   // Only needed if you don't have a real mail account for testing
-  nodemailer.createTestAccount((err, account) => {
+  if (email === '' || listJob === '') {
+    return cb ( { error: ''})
+  } else {
+    nodemailer.createTestAccount((err, account) => {
 
-    // create reusable transporter object using the default SMTP transport
-    let transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true, // true for 465, false for other ports
-      auth: {
-        user: "jofisijobfinder@gmail.com", // generated ethereal user
-        pass: "hackersejati"  // generated ethereal password
-      }
-    });
+      // create reusable transporter object using the default SMTP transport
+      let transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true, // true for 465, false for other ports
+        auth: {
+          user: "jofisijobfinder@gmail.com", // generated ethereal user
+          pass: "hackersejati"  // generated ethereal password
+        }
+      });
 
-    // setup email data with unicode symbols
-    let mailOptions = {
-      from: 'jofisijobfinder@gmail.com', // sender address
-      to: email.toLowerCase(), // list of receivers
-      subject: 'Lowongan Pekerjaan Hasil Pencarian', // Subject line
-      // text: 'Hello world?', // plain text body
-      html: `
+      // setup email data with unicode symbols
+      let mailOptions = {
+        from: 'jofisijobfinder@gmail.com', // sender address
+        to: email.toLowerCase(), // list of receivers
+        subject: 'Lowongan Pekerjaan Hasil Pencarian', // Subject line
+        // text: 'Hello world?', // plain text body
+        html: `
       <!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 
@@ -173,7 +176,7 @@ var sendEmail = (email, listJob, cb) => {
           <td bgcolor="#ffffff">
             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
               ${listJob.map((job) => {
-                return `
+          return `
                 <tr>
                 <td style="padding: 40px; font-family: sans-serif; font-size: 15px; line-height: 20px; color: #555555;">
                   <p style="margin: 0;">${job.title}</p>
@@ -197,7 +200,7 @@ var sendEmail = (email, listJob, cb) => {
                 </td>
               </tr>
                 `
-              })}
+        })}
               <tr>
                 <td style="padding: 40px; font-family: sans-serif; font-size: 15px; line-height: 20px; color: #555555;">
                   
@@ -234,23 +237,26 @@ var sendEmail = (email, listJob, cb) => {
 
 
       ` // html body
-    };
+      };
 
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        cb(error)
-        return console.log(error);
-      }
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          cb(error)
+          return console.log(error);
+        }
 
-      cb ({
-        success: 'email landing',
-        messageId: info.messageId
-      })
+        cb({
+          success: 'email landing',
+          messageId: info.messageId
+        })
 
-      console.log('Message sent: %s', info.messageId);
-      
+        console.log('Message sent: %s', info.messageId);
+
+      });
     });
-  });
+  }
+
+  
 
 }
 
