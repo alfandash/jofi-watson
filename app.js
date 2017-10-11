@@ -4,6 +4,7 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
+const mongoose = require('mongoose');
 
 var app = express();
 
@@ -18,6 +19,19 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// connection to mongodb
+mongoose.connect(`mongodb://jofipass:jofipass1@joficluster-shard-00-00-vghcd.mongodb.net:27017,joficluster-shard-00-01-vghcd.mongodb.net:27017,joficluster-shard-00-02-vghcd.mongodb.net:27017/jofi?ssl=true&replicaSet=joficluster-shard-0&authSource=admin`, function (err) {
+  if (err) { console.log(err); }
+  else {
+    console.log('db connected');
+  }
+})
+
+// feature cors
+const cors = require('cors')
+app.use(cors())
+
 
 var index = require('./routes/index');
 var users = require('./routes/users');
